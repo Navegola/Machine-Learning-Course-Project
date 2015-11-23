@@ -119,7 +119,7 @@ featurePlot(x = testing[, 2:46],
                   layout = c(5,9 ),
                   auto.key = list(columns = 2))
 ```
-
+#### No outliers in FALSE prediction detected
 
 ```{r, echo=FALSE}
 save(modelFit.rf,file="modelFit.rf.RData")
