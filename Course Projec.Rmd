@@ -1,0 +1,126 @@
+
+
+####Load necesary packages
+
+```{r }
+library(caret)
+library(dplyr)
+library(ggplot2)
+```
+
+####Download and load the data 
+
+```{r, cache=TRUE }
+setInternet2(use = TRUE)
+url<- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+download.file(url,destfile="Data/pml-training.csv")
+
+
+url<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(url,destfile="Data/pml-testing.csv")
+
+
+pml_training <- read.csv("Data/pml-training.csv")
+pml_testing <- read.csv("Data/pml-testing.csv")
+```
+
+####Select predictors in testing data
+```{r, cache=TRUE }
+ProjecTesting<-select(pml_testing,
+                      starts_with("roll"),
+                      starts_with("pitch"),
+                      starts_with("yaw"),
+                      starts_with("total"),
+                      starts_with("gyros"),
+                      starts_with("accel"),
+                      starts_with("magnet"))
+```
+
+####Testing missing values in testing data
+```{r, cache=TRUE }
+nrow(ProjecTesting)
+sum(complete.cases(ProjecTesting))
+```
+####Select predictors in testing data
+```{r, cache=TRUE }
+data<-select(pml_training,
+          classe,
+          starts_with("roll"),
+          starts_with("pitch"),
+          starts_with("yaw"),
+          starts_with("total"),
+          starts_with("gyros"),
+          starts_with("accel"),
+          starts_with("magnet"))
+```
+####Testing missing values in training data
+```{r, cache=TRUE }
+nrow(data)
+sum(complete.cases(data))
+```
+####Predictors that result in absolute pairwise correlations greater than 0.90 can be removed
+
+```{r, cache=TRUE }
+ncol(data)
+descrCorr <- cor(data[,-1])
+highCorr <- findCorrelation(descrCorr, 0.90)
+dataDescorr <- data[, -(highCorr+1)]
+ncol(dataDescorr)
+```
+####Predictors used for the model
+```{r, cache=TRUE }
+names(dataDescorr)
+```
+####Create trasining and testing set
+
+```{r, cache=TRUE }
+inTrain <- createDataPartition(y=dataDescorr$classe,p=0.7, list=FALSE)
+training <- dataDescorr[inTrain,]
+testing <- dataDescorr[-inTrain,]
+```
+
+####Predictors Box Plots
+```{r, cache=TRUE,fig.height=30,fig.width=10}
+featurePlot(x = training[, 2:46],
+                  y = training$classe,
+                  plot = "box",
+                  ## Pass in options to bwplot() 
+                  scales = list(y = list(relation="free"),
+                                x = list(rot = 90)),
+                  layout = c(5,9 ),
+                  auto.key = list(columns = 2))
+```                
+                  
+                  
+#### Random forests Model
+```{r, cache=TRUE }
+modelFit.rf <-  train(classe~ .,data=training,method="rf",prox=TRUE)
+modelFit.rf
+```
+
+#### Confusion Matrix
+```{r, cache=TRUE }
+cmrf <-confusionMatrix(predict(modelFit.rf, testing),testing$classe)
+cmrf
+```
+
+
+####True or false prediction  Box Plots
+```{r, cache=TRUE,fig.height=30,fig.width=10}
+pred <-  predict(modelFit.rf,testing)
+testing$predRight<- as.factor(pred==testing$class)   
+
+featurePlot(x = testing[, 2:46],
+                  y = testing$predRight,
+                  plot = "box",
+                  ## Pass in options to bwplot() 
+                  scales = list(y = list(relation="free"),
+                                x = list(rot = 90)),
+                  layout = c(5,9 ),
+                  auto.key = list(columns = 2))
+```
+
+
+```{r, echo=FALSE}
+save(modelFit.rf,file="modelFit.rf.RData")
+```
